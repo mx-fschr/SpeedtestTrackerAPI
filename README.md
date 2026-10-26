@@ -1,6 +1,6 @@
 # SpeedtestTrackerAPI
 
-A modern, type-safe, and async-friendly Python API wrapper for the **[Speedtest Tracker]([https://github.com/alexjustesen/speedtest-tracker])** (a self-hosted Docker container for automated internet speedtests).
+A modern, type-safe, and async-friendly Python API wrapper for the **[Speedtest Tracker](https://github.com/alexjustesen/speedtest-tracker)** (a self-hosted Docker container for automated internet speedtests).
 
 > ⚠️ **Important Note:** This package is an **unofficial community project** and is not officially affiliated with or endorsed by the original *Speedtest Tracker* project or its developers.
 
