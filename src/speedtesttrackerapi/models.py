@@ -1,33 +1,43 @@
-"""Data Models for the SpeedtestTrackerAPI Package"""
+"""Data Models for the SpeedtestTrackerAPI Package."""
 
-from pydantic import BaseModel, Field, AnyUrl, field_validator
+from datetime import date, datetime
+from typing import Any, List, Literal, Optional, Union
+
+from pydantic import AliasChoices, AnyUrl, BaseModel, ConfigDict, Field
 from pydantic.networks import IPvAnyAddress
-from datetime import datetime, date
-from typing import List, Optional, Literal
 
 
-class Ping(BaseModel):
-    """Ping data nested in Data()"""
+class BaseAPIModel(BaseModel):
+    """Base model with permissive handling for the live API payloads."""
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+
+class Ping(BaseAPIModel):
+    """Ping data nested in a speedtest result."""
 
     low: Optional[float] = None
     high: Optional[float] = None
     jitter: Optional[float] = None
     latency: Optional[float] = None
+    avg: Optional[float] = None
+    min: Optional[float] = None
+    max: Optional[float] = None
 
 
-class DataResult(BaseModel):
-    """Result data nested in Data()"""
+class DataResult(BaseAPIModel):
+    """Result metadata nested in a speedtest payload."""
 
-    id: Optional[str] = None
+    id: Optional[Union[str, int]] = None
     url: Optional[AnyUrl] = None
     persisted: Optional[bool] = None
 
 
-class Server(BaseModel):
-    """Server data nested in Data()"""
+class Server(BaseAPIModel):
+    """Server metadata used both in result payloads and the Ookla list."""
 
     id: Optional[int] = None
-    ip: Optional[IPvAnyAddress] = None
+    ip: Optional[Union[str, IPvAnyAddress]] = None
     host: Optional[str] = None
     name: Optional[str] = None
     port: Optional[int] = None
@@ -35,8 +45,8 @@ class Server(BaseModel):
     location: Optional[str] = None
 
 
-class Latency(BaseModel):
-    """Latency data nested in Data()"""
+class Latency(BaseAPIModel):
+    """Latency stats nested in upload/download payloads."""
 
     iqm: Optional[float] = None
     low: Optional[float] = None
@@ -44,82 +54,105 @@ class Latency(BaseModel):
     jitter: Optional[float] = None
 
 
-class Upload(BaseModel):
-    """Upload data nested in Data()"""
+class Upload(BaseAPIModel):
+    """Upload section of the speedtest payload."""
 
     bytes: Optional[int] = None
     elapsed: Optional[int] = None
-    latency: Latency
-    bandwith: Optional[int] = None
+    latency: Optional[Latency] = None
+    bandwidth: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("bandwidth", "bandwith"),
+    )
 
 
-class Download(BaseModel):
-    """Download data nested in Data()"""
+class Download(BaseAPIModel):
+    """Download section of the speedtest payload."""
 
     bytes: Optional[int] = None
     elapsed: Optional[int] = None
-    latency: Latency
-    bandwith: Optional[int] = None
+    latency: Optional[Latency] = None
+    bandwidth: Optional[int] = Field(
+        default=None,
+        validation_alias=AliasChoices("bandwidth", "bandwith"),
+    )
 
 
-class Interface(BaseModel):
-    """Interface data nested in Data()"""
+class Interface(BaseAPIModel):
+    """Network interface details inside a result payload."""
 
     name: Optional[str] = None
     is_vpn: Optional[bool] = None
     mac_address: Optional[str] = Field(
-        alias="macAdrr", pattern=r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$", default=None
+        default=None,
+        validation_alias=AliasChoices("mac_address", "macAddress", "macAdrr", "mac"),
     )
-    external_ip: Optional[IPvAnyAddress] = Field(alias="externalIp", default=None)
-    internal_ip: Optional[IPvAnyAddress] = Field(alias="internalIp", default=None)
+    external_ip: Optional[Union[str, IPvAnyAddress]] = Field(
+        default=None,
+        validation_alias=AliasChoices("external_ip", "externalIp", "external_ip"),
+    )
+    internal_ip: Optional[Union[str, IPvAnyAddress]] = Field(
+        default=None,
+        validation_alias=AliasChoices("internal_ip", "internalIp", "internal_ip"),
+    )
 
 
-class Data(BaseModel):
-    """Nested speedtest data payload"""
+class ResultData(BaseAPIModel):
+    """Nested data payload returned by a result record."""
 
-    isp: Optional[str] = None
-    ping: Ping
     type: Optional[str] = None
-    result: DataResult
-    server: Server
-    upload: Upload
-    download: Download
-    interface: Interface
+    level: Optional[str] = None
+    message: Optional[str] = None
+    isp: Optional[str] = None
+    ping: Optional[Ping] = None
+    result: Optional[DataResult] = None
+    server: Optional[Server] = None
+    upload: Optional[Upload] = None
+    download: Optional[Download] = None
+    interface: Optional[Interface] = None
     timestamp: Optional[datetime] = None
-    packet_loss: Optional[float] = Field(alias="packetLoss", default=None)
+    packet_loss: Optional[float] = Field(
+        default=None,
+        validation_alias=AliasChoices("packet_loss", "packetLoss"),
+    )
 
 
-class Result(BaseModel):
-    """Speedtest result entry"""
+class Result(BaseAPIModel):
+    """Speedtest result entry from the API."""
 
     id: Optional[int] = None
     service: Optional[str] = None
-    ping: Optional[int] = None
-    download: Optional[int] = None
-    upload: Optional[int] = None
-    download_bits: Optional[int] = None
-    upload_bits: Optional[int] = None
-    download_bits_human: Optional[int] = None
-    upload_bits_human: Optional[int] = None
+    ping: Optional[float] = None
+    download: Optional[Union[int, float]] = None
+    upload: Optional[Union[int, float]] = None
+    download_bits: Optional[Union[int, float]] = None
+    upload_bits: Optional[Union[int, float]] = None
+    download_bits_human: Optional[str] = None
+    upload_bits_human: Optional[str] = None
+    download_bytes: Optional[Union[int, float]] = None
+    upload_bytes: Optional[Union[int, float]] = None
+    download_bytes_human: Optional[str] = None
+    upload_bytes_human: Optional[str] = None
     benchmarks: Optional[dict] = None
     healthy: Optional[bool] = None
     status: Optional[str] = None
     scheduled: Optional[bool] = None
+    dispatched_by: Optional[int] = None
     comments: Optional[str] = None
-    data: Data
+    data: Optional[ResultData] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
 
-class ResultResponse(BaseModel):
-    """Response for a single Speedtest result entry"""
+class ResultResponse(BaseAPIModel):
+    """Response for a single Speedtest result entry."""
 
-    data: Result
+    data: Optional[Result] = None
     message: Optional[str] = None
 
 
-class Links(BaseModel):
-    """Links data nested in ResultsCollection()"""
+class Links(BaseAPIModel):
+    """Top-level pagination links on the paginated results response."""
 
     first: Optional[str] = None
     last: Optional[str] = None
@@ -127,66 +160,90 @@ class Links(BaseModel):
     next: Optional[str] = None
 
 
-class MetaLinks(BaseModel):
-    """Links data nested in Meta()"""
+class MetaLinks(BaseAPIModel):
+    """Pagination items used inside meta.links."""
 
     url: Optional[str] = None
     label: Optional[str] = None
+    page: Optional[int] = None
     active: Optional[bool] = None
 
 
-class Meta(BaseModel):
-    """Meta data nested in ResultsCollection()"""
+class Meta(BaseAPIModel):
+    """Meta data nested in the results collection."""
 
     current_page: Optional[int] = None
-    from_: Optional[int] = Field(alias="from", default=None)
+    from_: Optional[int] = Field(default=None, alias="from")
     last_page: Optional[int] = None
-    links: MetaLinks
+    links: Optional[List[MetaLinks]] = None
     path: Optional[str] = None
-    per_page: Optional[int] = Field(alias="per.page", default=None)
+    per_page: Optional[int] = Field(default=None, alias="per.page")
     to: Optional[int] = None
     total: Optional[int] = None
 
 
-class ResultsCollection(BaseModel):
-    """Paginated list of Speedtest results"""
+class ResultsCollection(BaseAPIModel):
+    """Paginated list of Speedtest results."""
 
     data: Optional[List[Result]] = None
-    links: Links
-    meta: Meta
+    links: Optional[Links] = None
+    meta: Optional[Meta] = None
 
 
-class ServersCollection(BaseModel):
-    """Collection of Ookla speedtest servers"""
+class ServersCollection(BaseAPIModel):
+    """Collection of Ookla speedtest servers."""
 
     data: Optional[List[Server]] = None
     message: Optional[str] = None
 
 
-class SpeedtestRun(BaseModel):
-    """A queued speedtest result"""
+class SpeedtestRun(BaseAPIModel):
+    """A queued speedtest result."""
 
-    data: Result
+    data: Optional[Result] = None
     message: Optional[str] = None
 
 
-class Stats(BaseModel):
-    """Aggregated speedtest statistics"""
+class PingStats(BaseAPIModel):
+    """Aggregate ping statistics returned by /api/v1/stats."""
 
+    avg: Optional[float] = None
+    min: Optional[float] = None
+    max: Optional[float] = None
+
+
+class TransferStats(BaseAPIModel):
+    """Aggregate transfer statistics returned by /api/v1/stats."""
+
+    avg: Optional[float] = None
+    avg_bits: Optional[int] = None
+    avg_bits_human: Optional[str] = None
+    min: Optional[float] = None
+    min_bits: Optional[int] = None
+    min_bits_human: Optional[str] = None
+    max: Optional[float] = None
+    max_bits: Optional[int] = None
+    max_bits_human: Optional[str] = None
+
+
+class StatsData(BaseAPIModel):
+    """Nested aggregate statistics payload."""
+
+    ping: Optional[PingStats] = None
+    download: Optional[TransferStats] = None
+    upload: Optional[TransferStats] = None
     total_results: Optional[int] = None
-    avg_ping: Optional[float] = None
-    avg_upload: Optional[float] = None
-    avg_download: Optional[float] = None
-    min_ping: Optional[float] = None
-    min_download: Optional[float] = None
-    min_upload: Optional[float] = None
-    max_ping: Optional[float] = None
-    max_download: Optional[float] = None
-    max_upload: Optional[float] = None
 
 
-class QueryParameters(BaseModel):
-    """Query Parameters"""
+class Stats(BaseAPIModel):
+    """Aggregated speedtest statistics response."""
+
+    data: Optional[StatsData] = None
+    message: Optional[str] = None
+
+
+class QueryParameters(BaseAPIModel):
+    """Query Parameters."""
 
     per_page: Optional[int] = Field(alias="per.page", ge=1, le=500, default=25)
     ping_filter: Optional[int] = Field(alias="filter[ping]", default=None)

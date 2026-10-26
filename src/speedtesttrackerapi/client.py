@@ -13,7 +13,7 @@ from .models import (
 
 
 class ApiClient:
-    """"""
+    """Cleint which connects to the API of the Speedtest Tracker Instance"""
 
     def __init__(self, base_url: str, token: str, verify_ssl: bool = True):
         """Initializes the api client
