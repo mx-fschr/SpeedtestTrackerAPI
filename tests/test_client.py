@@ -4,7 +4,7 @@ import responses
 from speedtesttrackerapi import ApiClient
 from speedtesttrackerapi.exceptions import AuthenticationError
 
-BASE_URL = "https://speedtest.homeserver.home.arpa"
+BASE_URL = "https://speedtest-tracker.example.com"
 TOKEN = "token"
 
 
