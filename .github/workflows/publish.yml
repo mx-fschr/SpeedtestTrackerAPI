@@ -26,6 +26,4 @@ jobs:
         run: uv build
 
       - name: Publish package
-        run: uv publish
-        env:
-          UV_PUBLISH_TOKEN: "none"
+        run: uv publish --trusted-publishing always
